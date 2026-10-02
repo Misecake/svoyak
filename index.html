@@ -69,7 +69,14 @@
   #timerFill{height:100%;width:100%;background:linear-gradient(90deg,#3cc878,#ffd34d);
              transition:width 1s linear, background .3s}
   #timerFill.danger{background:linear-gradient(90deg,#ff4d4d,#ff9500)}
+  #timerRow{display:flex;align-items:center;justify-content:center;gap:14px}
   #timerNum{font-size:15px;color:#b48cff;font-weight:700;letter-spacing:2px}
+  #pauseBtn{display:none;background:linear-gradient(180deg,#ffd34d,#a06a10);color:#2a1000;
+    border:none;padding:8px 18px;border-radius:8px;font-size:14px;font-weight:800;
+    cursor:pointer;letter-spacing:.5px;transition:.15s}
+  #pauseBtn:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(255,211,77,.5)}
+  #pauseBtn.on{background:linear-gradient(180deg,#3cc878,#1f8a4e);color:#fff}
+  #pauseBtn.on:hover{box-shadow:0 6px 18px rgba(60,200,120,.5)}
 
   #aBox{display:none;background:rgba(60,200,120,.12);border:1px solid #3cc878;
         border-radius:12px;padding:22px;margin-bottom:26px}
@@ -132,7 +139,10 @@
     <div class="tag" id="tag">—</div>
     <div id="timerWrap">
       <div id="timerBar"><div id="timerFill"></div></div>
-      <div id="timerNum">30</div>
+      <div id="timerRow">
+        <div id="timerNum">30</div>
+        <button id="pauseBtn" onclick="togglePause()">⏸ Пауза</button>
+      </div>
     </div>
     <div id="qText"></div>
     <div id="aBox">
@@ -210,7 +220,7 @@ const DATA = [
   { title:"Случайность", q:[
     {v:100, q:"Кто использовал в своём лексиконе «фа пэпэ шнейне»?", a:"Ганвест"},
     {v:200, q:"Угадай песню по эмодзи: 🏔️ ➡️ 🌲", a:"TOLY SUMMER — за горами за лесами"},
-    {v:300, q:"Откуда взялось слово «сорок» вместо «четыре десятка»?", a:"От древнерусского «сорокъ» — связка из 40 шкурок соболя (мера счёта)"},
+    {v:300, q:"К какому мультсериалу привязали мем «Да ты шуешь»?", a:"Барбоскины (Роза)"},
     {v:400, q:"Что такое «аканье» и «оканье»?", a:"Тип произношения безударных гласных: аканье — мАлАко (центр/юг), оканье — мОлОко (север)"},
     {v:500, q:"Что такое «неполногласие»? Пример.", a:"Сочетание «ра», «ла» в старославянском: град, глад, млеко — соответствуют русским полногласным город, голод, молоко"}
   ]}
@@ -237,6 +247,7 @@ const startBtn = document.getElementById('startBtn');
 const timerWrap = document.getElementById('timerWrap');
 const timerFill = document.getElementById('timerFill');
 const timerNum = document.getElementById('timerNum');
+const pauseBtn = document.getElementById('pauseBtn');
 
 const introModal = document.getElementById('introModal');
 const introCard = document.getElementById('introCard');
@@ -249,6 +260,7 @@ let pendingItem = null;
 let pendingCat = null;
 let timerId = null;
 let timeLeft = 30;
+let isPaused = false;
 const TOTAL_TIME = 30;
 
 DATA.forEach(c=>{
@@ -314,6 +326,10 @@ function openQ(item, cell, catTitle){
   aBox.classList.remove('on');
   revealBtn.style.display = 'inline-block';
   startBtn.style.display = 'inline-block';
+  pauseBtn.style.display = 'none';
+  pauseBtn.textContent = '⏸ Пауза';
+  pauseBtn.classList.remove('on');
+  isPaused = false;
   timerWrap.classList.remove('on');
   stopTimer();
   modal.classList.add('on');
@@ -335,6 +351,10 @@ function goToQuestion(){
   aBox.classList.remove('on');
   revealBtn.style.display = 'inline-block';
   startBtn.style.display = 'inline-block';
+  pauseBtn.style.display = 'none';
+  pauseBtn.textContent = '⏸ Пауза';
+  pauseBtn.classList.remove('on');
+  isPaused = false;
   timerWrap.classList.remove('on');
   stopTimer();
   modal.classList.add('on');
@@ -343,25 +363,47 @@ function goToQuestion(){
   pendingCat = null;
 }
 
+function tick(){
+  timeLeft--;
+  timerNum.textContent = timeLeft;
+  timerFill.style.width = (timeLeft/TOTAL_TIME*100)+'%';
+  if(timeLeft <= 5){ timerFill.classList.add('danger'); soundTick(); }
+  if(timeLeft <= 0){
+    stopTimer();
+    soundTimeout();
+    timerNum.textContent = 'ВРЕМЯ!';
+    pauseBtn.style.display = 'none';
+  }
+}
+
 function startTimer(){
   stopTimer();
   timeLeft = TOTAL_TIME;
+  isPaused = false;
   timerWrap.classList.add('on');
   timerFill.style.width = '100%';
   timerFill.classList.remove('danger');
   timerNum.textContent = timeLeft;
   startBtn.style.display = 'none';
-  timerId = setInterval(()=>{
-    timeLeft--;
-    timerNum.textContent = timeLeft;
-    timerFill.style.width = (timeLeft/TOTAL_TIME*100)+'%';
-    if(timeLeft <= 5){ timerFill.classList.add('danger'); soundTick(); }
-    if(timeLeft <= 0){
-      stopTimer();
-      soundTimeout();
-      timerNum.textContent = 'ВРЕМЯ!';
-    }
-  },1000);
+  pauseBtn.style.display = 'inline-block';
+  pauseBtn.textContent = '⏸ Пауза';
+  pauseBtn.classList.remove('on');
+  timerId = setInterval(tick, 1000);
+}
+
+function togglePause(){
+  if(!timerId && !isPaused) return;
+  if(isPaused){
+    isPaused = false;
+    pauseBtn.textContent = '⏸ Пауза';
+    pauseBtn.classList.remove('on');
+    timerId = setInterval(tick, 1000);
+  } else {
+    isPaused = true;
+    stopTimer();
+    pauseBtn.textContent = '▶ Продолжить';
+    pauseBtn.classList.add('on');
+  }
 }
 
 function stopTimer(){
@@ -372,12 +414,18 @@ function reveal(){
   aBox.classList.add('on');
   revealBtn.style.display = 'none';
   startBtn.style.display = 'none';
-  stopTimer();
+  pauseBtn.style.display = 'none';
+  if(timerId || isPaused){
+    stopTimer();
+    isPaused = false;
+    timerNum.textContent = 'ПАУЗА';
+  }
   soundDing();
 }
 
 function closeModal(){
   stopTimer();
+  isPaused = false;
   modal.classList.remove('on');
   if(currentCell) currentCell.classList.add('used');
   currentCell = null;
@@ -405,6 +453,12 @@ document.addEventListener('keydown', e=>{
   if(e.key === 'Enter' && modal.classList.contains('on') && startBtn.style.display !== 'none'){
     e.preventDefault();
     startTimer();
+  }
+  if(e.key === 'p' || e.key === 'P' || e.key === 'з' || e.key === 'З'){
+    if(pauseBtn.style.display !== 'none'){
+      e.preventDefault();
+      togglePause();
+    }
   }
 });
 
